@@ -2,6 +2,7 @@ library(forecast)
 library(nnet)
 library(randomForest)
 library(rpart)
+library(earth)
 
 rm(list = ls())
 setwd("C:/Users/NelsonR/Desktop/Predictive modelling")
@@ -15,3 +16,6 @@ tree <- rpart(formula = SalePrice ~ OverallQual + YearBuilt + YearRemodAdd + Tot
 
 # Linear Regression
 reg <- lm(formula = SalePrice ~ OverallQual + YearBuilt + YearRemodAdd + TotalBsmtSF + GrLivArea + GarageCars + BsmtQual_Ex + KitchenQual_Ex, data = df)
+
+# Spline Model
+spline <- earth(formula = SalePrice ~ BsmtQual_Ex + GarageArea + GarageCars + GrLivArea + KitchenQual_Ex + OverallQual + TotalBsmtSF + YearBuilt + YearRemodAdd, data = df, glm = list(family = gaussian), minspan = 0)
