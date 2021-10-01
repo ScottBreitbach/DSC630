@@ -23,9 +23,7 @@ library(patchwork)
 This loads up the data sets dfTraining and dfAnalysis so we can use them to create models
 ```{r loaddata, include=TRUE}
 rm(list = ls())
-setwd("D:/College/DSC640/github/DSC630-1/R scripts/Project")
 df <- read.csv("dfTrain1.csv") 
-dfa <- read.csv("dfAnalysis_Clean.csv") 
 ```
 
 ## Decision Tree
