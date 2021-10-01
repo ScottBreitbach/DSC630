@@ -27,7 +27,6 @@ df <- read.csv("dfTrain1.csv")
 ```
 
 ## Decision Tree
-
 Create a decision tree model
 ```{r dt, include=TRUE}
 # Decision Tree
@@ -41,7 +40,7 @@ rpart.plot(tree, box.palette="RdBu", shadow.col="gray", nn=TRUE)
 ```
 
 
-## R Markdown
+## Linear Regression
 Regression Model
 ```{r reg1, include=TRUE}
 # Linear Regression (using variables that are high correlation)
