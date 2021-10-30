@@ -49,8 +49,8 @@ dfOverall <- read.csv("featOverall.csv")  # 9
 lmAn = lm(formula = SalePrice~., data = dfAn)
 summary(lmAn) # 1 Adjusted R-squared: 0.9061
 
-lmCorr = lm(formula = SalePrice~., data = dfCorr)
-summary(lmCorr) # 2 Adjusted R-squared: 0.9963
+# lmCorr = lm(formula = SalePrice~., data = dfCorr)
+# summary(lmCorr) # 2 Adjusted R-squared: 0.9963
 
 lmTr1 = lm(formula = SalePrice~., data = dfTr1)
 summary(lmTr1) # 3 Adjusted R-squared: 0.7892
@@ -74,19 +74,19 @@ lmOverall = lm(formula = SalePrice~., data = dfOverall)
 summary(lmOverall) # 9 Adjusted R-squared: 0.8257
 
 # Run model comparison
-# # https://www.scribbr.com/statistics/akaike-information-criterion/
-# # install.packages("AICcmodavg")
-# library(AICcmodavg)
-# models <- list(lmAn, lmCorr, lmTr1, lmTrC, lmFstat, 
-#                lmLBGM, lmLogReg, lmMInf, lmOverall)
-# model.names <- c('lmAn', 'lmCorr', 'lmTr1', 'lmTrC', 'lmFstat', 
-#                  'lmLBGM', 'lmLogReg', 'lmMInf', 'lmOverall')
-# aictab(cand.set = models, modnames = model.names)
+# https://www.scribbr.com/statistics/akaike-information-criterion/
+# install.packages("AICcmodavg")
+library(AICcmodavg)
+models <- list(lmAn, lmTr1, lmTrC, lmFstat,
+               lmLBGM, lmLogReg, lmMInf, lmOverall)
+model.names <- c('lmAn', 'lmTr1', 'lmTrC', 'lmFstat',
+                 'lmLBGM', 'lmLogReg', 'lmMInf', 'lmOverall')
+aictab(cand.set = models, modnames = model.names)
 
 # model_performance(lmAn)
 
 # Compare performance of both models
-compare_performance(lmAn, lmCorr, lmTr1, lmTrC, lmFstat, 
+compare_performance(lmAn, lmTr1, lmTrC, lmFstat, 
                     lmLBGM, lmLogReg, lmMInf, lmOverall) # I like this one
 # test_performance(lmAn, lmCorr, lmTr1, lmTrC, lmFstat, 
 #                  lmLBGM, lmLogReg, lmMInf, lmOverall)
