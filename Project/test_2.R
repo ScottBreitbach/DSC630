@@ -27,7 +27,7 @@ library(rattle)
 rm(list = ls())
 
 # getwd()
-# setwd("C:/Users/micha/OneDrive/Documents/GitHub/DSC630/Project")
+setwd("C:/Users/micha/OneDrive/Documents/GitHub/DSC630/Project")
 
 
 # head(subset(df, select = -c(SalePrice)))
@@ -96,8 +96,36 @@ compare_performance(lmAn, lmTr1, lmTrC, lmFstat,
 # check_model(lmAn)
 
 ## NOTE: dfAn appears to be the same results as dfTrC?
-dim(dfAn)
-dim(dfTrC)
+# dim(dfAn)
+# dim(dfTrC)
+
+
+library(leaps)
+Best_Subset <- regsubsets(SalePrice~.,
+                          data = dfAn,
+                          nbest = 1,    # 1 best model for each number of predictors
+                          nvmax = NULL, # NULL for no limit on number of variables
+                          force.out = NULL,
+                          method = "exhaustive",
+                          really.big = TRUE) # because of large data set
+
+summary_best_subset <- summary(regsubsets.out)
+as.data.frame(summary_best_subset$outmat)
+
+resubsets.out
+
+# Number of Predictors: 
+# See waht the package recommends for # predictors to use for our data set
+#numPred <- which.max(summary_best_subset$adjr2)
+
+# What are the best predictors?
+#summary_best_subset$which[numPred,]
+
+# Run the regression model with the best predictors
+best.model <- lm(SalePrice ~ .,
+                 data = dfc)
+summary(best.model)
+
 
 
 ## NEURAL NETWORK
