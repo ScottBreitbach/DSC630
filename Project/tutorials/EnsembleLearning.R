@@ -10,6 +10,10 @@ library(MASS)
 train <- Pima.tr
 test <- Pima.te
 
+dim(train)
+head(train[,8])
+head(train[,1:7])
+
 # Print out the first lines of `train`
 head(train)
 

@@ -291,32 +291,121 @@ test <- dfOverall[2:31]
 
 Predict <- neuralnet::compute(nnOverall, test) # force use of compute() function from the correct package
 Predict$net.result  # okay, it turns out compute is deprecated anyway. Use predict()
+
 'NOTE: All of the results are the same. It turns out this is common when the'
 'data being fed into the neural network are not normalized first. Moving on.'
 
-Predict2 <- predict(nnOverall, test)
-table(dfOverall$SalePrice, Predict2[,1])
+# Predict2 <- predict(nnOverall, test)
+# table(dfOverall$SalePrice, Predict2[,1])
+
+# # fit neural network
+# nnOverall <- neuralnet(SalePrice~., data = dfOverall, hidden=3, 
+#                        linear.output = TRUE, stepmax = 1e6) # does not converge
+# plot(nnOverall)
+# 
+# predict.Overall <- predict(nnOverall, dfOverall)
+# predict.Overall
+
+# # Split data
+# train_idx <- sample(nrow(dfOverall), 2/3 * nrow(dfOverall))
+# df_train <- dfOverall[train_idx,]
+# df_test <- dfOverall[-train_idx,]
+ 
+# nn <- neuralnet(SalePrice~., data = df_train, linear.output = TRUE, stepmax = 1e6)
+# plot(nn)
+# pred <- predict(nn, df_test)
+# pred
 
 
-# fit neural network
-nnOverall <- neuralnet(SalePrice~., data = dfOverall, hidden=3, 
-                       linear.output = TRUE, stepmax = 1e6) # does not converge
-plot(nnOverall)
-
+## ENSEMBLE LEARNING
+# Load package
+library("SuperLearner")
 
 # Split data
 train_idx <- sample(nrow(dfOverall), 2/3 * nrow(dfOverall))
 df_train <- dfOverall[train_idx,]
 df_test <- dfOverall[-train_idx,]
 
-nn <- neuralnet(SalePrice~., data = df_train, linear.output = TRUE)
-pred <- predict(nn, df_test)
+# target variable
+y <- df_train[,1]
+ytest <- df_test[,1]
+
+# predictor variables
+x <- df_train[,2:31]
+xtest <- df_test[,2:31]
+
+# Set randomization seed
+set.seed(42)
 
 
+# Fit the ensemble model
+if (!require(xgboost)) install.packages('xgboost')
+library(xgboost)
+library(polspline)
+library(extraTrees)
+library(biglasso)
+library(party)
+library(glmnet)
+library(speedglm)
+library(KernelKnn)
+model <- SuperLearner(y,
+                      x,
+                      family=gaussian(),
+                      SL.library=list("SL.bartMachine",
+                                      "SL.gbm",
+                                      "SL.nnls",
+                                      "SL.extraTrees",
+                                      "SL.rpartPrune",
+                                      "SL.stepAIC"))
+model2 <- SuperLearner(y,
+                      x,
+                      family=gaussian(),
+                      SL.library=list("SL.bartMachine",
+                                      "SL.gbm",
+                                      "SL.extraTrees",
+                                      "SL.rpartPrune",
+                                      "SL.stepAIC"))
+# Return the model
+model2
+model$times
+# plot(cv.model)
+warnings()
+
+# First Pass:
+list("SL.bayesglm", "SL.nnet", "SL.speedglm", "SL.caret.rpart", "SL.glmnet",
+     "SL.speedlm", "SL.randomForest", "SL.biglasso")
+
+# Second Pass:
+list("SL.ranger", "SL.step.forward", "SL.svm", "SL.earth", "SL.glm", "SL.ipredbagg",
+     "SL.lm", "SL.polymars", "SL.step", "SL.xgboost", "SL.loess") #lm "fit may be misleading"
+
+# Third Pass:
+list("SL.rpart", "SL.cforest", "SL.ksvm", "SL.bartMachine")
+
+list("SL.bartMachine", "SL.gbm", "SL.nnls", "SL.extraTrees", "SL.rpartPrune", 
+     "SL.stepAIC") # nnls highest coefficient but also high error
 
 
+## Get V-vold cross-validated risk estimate
+cv.model <- CV.SuperLearner(y, x, V=5,
+                            SL.library = list("SL.gbm", 
+                                              "SL.nnls", 
+                                              "SL.extraTrees", 
+                                              "SL.rpartPrune", 
+                                              "SL.stepAIC"))
+cv.model2 <- CV.SuperLearner(y, x, V=5,
+                            SL.library = list("SL.bartMachine",
+                                              "SL.gbm", 
+                                              "SL.extraTrees", 
+                                              "SL.rpartPrune", 
+                                              "SL.stepAIC"))
+# Print out the summary statistics
+summary(cv.model)
+summary(cv.model2)
 
-
+# Plot models used and their variation
+plot(cv.model)
+plot(cv.model2)
 
 
 
