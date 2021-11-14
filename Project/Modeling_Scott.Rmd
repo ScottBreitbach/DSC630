@@ -15,7 +15,7 @@ setwd("C:/Users/micha/OneDrive/Documents/GitHub/DSC630/Project")
 
 ## Load Dataframes
 
-```{r df}
+```{r load dfs}
 # Entire Dataset with Ordinal Variables converted
 dfOrd <- read.csv("dfTrainC.csv")      # 1460 x  81
 # Entire Dataset with dummy variables created
@@ -36,54 +36,258 @@ dfMInf <- read.csv("featMutualInformation.csv")    # 7 1460 x 31 (top mutual inf
 dfOverall <- read.csv("featOverall.csv")  # 8 1460 x 31 (top overall features)
 ```
 
-## Linear Regression Modeling
+# Linear Regression Modeling
 
 ```{r lm}
 # Get summary of model for each data set
 lmOrd = lm(formula = SalePrice~., data = dfOrd)
-summary(lmOrd)
-
 lmAn = lm(formula = SalePrice~., data = dfAn)
-summary(lmAn) 
-
 lmCorrSP = lm(formula = SalePrice~., data = dfCorrSP)
-summary(lmCorrSP)
-
 lmFstat = lm(formula = SalePrice~., data = dfFstat)
-summary(lmFstat)
-
 lmLBGM = lm(formula = SalePrice~., data = dfLBGM)
-summary(lmLBGM)
-
 lmLogReg = lm(formula = SalePrice~., data = dfLogReg)
-summary(lmLogReg)
-
 lmMInf = lm(formula = SalePrice~., data = dfMInf)
-summary(lmMInf)
-
 lmOverall = lm(formula = SalePrice~., data = dfOverall)
-summary(lmOverall)
+
+# Summary of one model
+summary(lmFstat)
 ```
 
 ## Compare Linear Regression Models
 
-```{r lm}
-# Load libraries
-library(AICcmodavg)
-
-# Put together list of models for comparison
-models <- list(lmOrd, lmAn, lmCorrSP, lmFstat,
-               lmLBGM, lmLogReg, lmMInf, lmOverall)
-model.names <- c('lmOrd', 'lmAn', 'lmCorrSP', 'lmFstat',
-                 'lmLBGM', 'lmLogReg', 'lmMInf', 'lmOverall')
-aictab(cand.set = models, modnames = model.names)
-
-# Nice summary comparison
-# From here: https://cran.r-project.org/web/packages/performance/performance.pdf
+```{r lm compare}
+# From: https://cran.r-project.org/web/packages/performance/performance.pdf
 # Load libraries
 library(performance)  
 
 # Compare models
 compare_performance(lmOrd, lmAn, lmCorrSP, lmFstat, 
                     lmLBGM, lmLogReg, lmMInf, lmOverall)
+```
+Using the entire data set provides the same results, whether or not dummy 
+variables are included. Barring use of the entire data set for modeling, 
+feature selection by F-statistic provides the lowest AIC and highest r-squared,
+followed closely by the Overall selected features and the highly correlated.
+
+## Check Model
+
+```{r model visual}
+# Check Collinearity of Model Variables
+check_collinearity(lmFstat)  
+
+# Visualization of multiple model checks
+check_model(lmFstat)
+```
+
+The dummy variables `SaleCondition_Partial` and `SaleType_New` show a high
+degree of correlation and one of these should probably be removed.
+
+
+
+
+
+## Check Accuracy of Models
+
+```{r lm accuracy}
+# Only included feature-selected data sets due to size
+accCorrSP <- performance_accuracy(lmCorrSP, method = c("cv", "boot"), k = 5, n = 1000)
+print("Accuracy lmCorrSP: ")
+accCorrSP$Accuracy
+accFstat <- performance_accuracy(lmFstat, method = c("cv", "boot"), k = 5, n = 1000)
+print("Accuracy lmFstat: ")
+accFstat$Accuracy
+accLBGM <- performance_accuracy(lmLBGM, method = c("cv", "boot"), k = 5, n = 1000)
+print("Accuracy lmLBGM: ")
+accLBGM$Accuracy
+accLogReg <- performance_accuracy(lmLogReg, method = c("cv", "boot"), k = 5, n = 1000)
+print("Accuracy lmLogReg: ")
+accLogReg$Accuracy
+accMInf <- performance_accuracy(lmMInf, method = c("cv", "boot"), k = 5, n = 1000)
+print("Accuracy lmMInf: ")
+accMInf$Accuracy
+accOverall <- performance_accuracy(lmOverall, method = c("cv", "boot"), k = 5, n = 1000)
+print("Accuracy lmOverall: ")
+accOverall$Accuracy
+```
+
+The Overall features data set shows the best accuracy here at 89%, narrowly
+beating out F-statistic and Correlation as feature selection methods for
+linear regression modeling. 
+
+
+## Hosmer-Lemeshow Goodness-of-Fit Test
+
+```{r fit}
+# Requires glm instead of lm
+glmOverall = glm(formula = SalePrice~., data = dfOverall)
+performance_hosmer(glmOverall)
+```
+Model seems to fit well.
+
+
+# Decision Trees
+## Random Forest
+
+```{r random forest}
+# From: https://www.datacamp.com/community/tutorials/decision-trees-R
+# Load Libraries
+library(randomForest)
+
+# Set up training set
+train.overall = sample(1:nrow(dfOverall), 1060)
+
+# Set up random forest model using training subset
+rf.overall = randomForest(SalePrice~., data = dfOverall, subset = train.overall)
+rf.overall
+
+## TUNING
+# Set up error variables
+oob.err = double(20)
+test.err = double(20)
+
+# Determine optimal number of variables (mtry) to randomly select at each split
+for (mtry in 1:20){
+  fit = randomForest(SalePrice~., data = dfOverall, subset = train.overall, 
+                     mtry = mtry, ntree = 350)
+  oob.err[mtry] = fit$mse[10]
+  pred = predict(fit, dfOverall[-train.overall,])
+  test.err[mtry] = with(dfOverall[-train.overall,], mean( (SalePrice-pred)^2 ))
+}
+
+# Plot results
+matplot(1:mtry, cbind(oob.err, test.err), pch = 23, col = c("red", "blue"), type = "b", ylab = "Mean Squared Error")
+legend("topright", legend = c("OOB", "Test"), pch = 23, col = c("red", "blue"))
+```
+Model may be improved by setting `mtry` to 5 or 6.
+
+## Boosting Trees using Gradient Boosted Modeling
+
+```{r boost}
+# Load Libraries
+library(gbm)
+
+# Set up boosting model
+boost.overall = gbm(SalePrice~., data = dfOverall[train.overall,], 
+                    distribution = "gaussian", # continuous 
+                    n.trees = 10000, shrinkage = 0.01, interaction.depth = 4)
+# Show variable importance plot
+summary(boost.overall)
+```
+Our model here is largely influenced by only a handful of variables: 
+`OverallQual` accounting for about a third, `GrLivArea` about a fourth, followed
+by `GarageArea` and `MasVnrArea`, then `WoodDeckSF` and `ExterQual` to a lesser
+extent. Let's look at a few of them.
+
+```{r boost variables}
+# Plot variables
+plot(boost.overall,i="OverallQual")
+plot(boost.overall,i="GrLivArea")
+plot(boost.overall,i="GarageArea")
+plot(boost.overall,i="FireplaceQu")
+```
+Most of these variables appear to show a roughly linear increase in correlation
+with `SalePrice`, but notice that `FirePlaceQu` has a huge jump between 0/1
+rating compared to 2+ rating. In the future, this variable could probably be
+binned into a binary good/bad rating.
+
+### Predict the boosted model on the data set
+
+```{r boost predict}
+# Make a grid of number of trees
+n.trees = seq(from = 100, to = 10000, by = 100)
+# Run predict on boosted model
+predmat = predict(boost.overall, newdata = dfOverall[-train.overall,], n.trees = n.trees)
+# dim(predmat)
+
+# Compute the test error
+boost.err = with(dfOverall[-train.overall,], 
+                 apply( (predmat - SalePrice)^2, 2, mean) )
+
+# Best error from random forest
+print("Random forest best error:")
+min(test.err)
+# Best error from boosting
+print("Boosting best error:")
+min(boost.err)
+
+# Plot results
+plot(n.trees, boost.err, pch = 23, ylab = "Mean Squared Error", 
+     xlab = "# Trees", main = "Boosting Test Error")
+abline(h = min(test.err), col = "red")
+```
+Boosting manages to drop the error below the best error from the Random Forest
+model (red line). 
+
+# Ensemble Modeling
+Using `SuperLearner()`  
+Source: https://www.datacamp.com/community/tutorials/ensemble-r-machine-learning
+
+```{r ensemble}
+# Load libraries
+library("SuperLearner")
+
+# Split data
+train_idx <- sample(nrow(dfOverall), 2/3 * nrow(dfOverall))
+df_train <- dfOverall[train_idx,]
+df_test <- dfOverall[-train_idx,]
+
+# Spilt out target variable
+y <- df_train[,1]
+ytest <- df_test[,1]
+
+# Split out predictor variables
+x <- df_train[,2:21]
+xtest <- df_test[,2:21]
+
+# Return the model
+sl <- SuperLearner(y, x, family = gaussian(),
+                   SL.library = list("SL.speedlm", "SL.svm", "SL.gbm", 
+                                     "SL.extraTrees"))
+
+# # Models removed from ensemble due to low coefficient:
+# list("SL.bayesglm", "SL.nnet", "SL.speedglm", "SL.caret.rpart", "SL.glmnet",
+#      "SL.randomForest", "SL.biglasso", "SL.ranger", "SL.step.forward",
+#      "SL.earth", "SL.ipredbagg", "SL.polymars", "SL.step", "SL.rpart",
+#      "SL.cforest", "SL.ksvm", "SL.stepAIC",  # removed first pass
+#      "SL.xgboost", "SL.bartMachine",         # removed second pass
+#      "SL.rpartPrune",                        # removed third pass
+#      "SL.loess")                             # removed due to high added risk
+
+# Return the model
+sl
+# Look at modeling time
+sl$times
+```
+
+The `extraTrees` model in the ensemble has the highest coefficient, indicating
+it is weighted highly in the ensemble. Following this, `gbm` and `speedlm` are
+the next highest weighted models.
+
+### Cross-Validation of Ensemble
+
+```{r ensemble cv}
+# Get V-fold cross-validated risk estimate
+cv.sl <- CV.SuperLearner(y, x, V=5, family = gaussian(),
+                         SL.library = list("SL.speedlm", "SL.svm", "SL.gbm", 
+                                           "SL.extraTrees"))
+
+# Print out the summary statistics
+summary(cv.sl)
+
+# Plot models used and their variation
+plot(cv.sl)
+```
+
+### Make Predictions using `SuperLearner()`
+
+```{r predict}
+
+```
+
+```{r desc}
+
+```
+
+```{r desc}
+
 ```

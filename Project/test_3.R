@@ -189,8 +189,8 @@ tree <- rpart(formula = SalePrice~., data = dfOverall, minsplit = 20,
               usesurrogate = 0, surrogatestyle = 0)
 rpart.plot(tree, box.palette="RdBu", shadow.col="gray", nn=TRUE)
 
-tree2 <- rpart(formula = 
-               data = dfc, minsplit = 20, minbucket = 7, xval = 10, 
+tree2 <- rpart(formula = SalePrice~.,
+               data = dfCorrSP, minsplit = 20, minbucket = 7, xval = 10, 
                maxdepth = 5, cp = 1e-05, usesurrogate = 0, surrogatestyle = 0)
 print(tree2)
 # Visualize the decision tree with rpart.plot
@@ -231,13 +231,15 @@ oob.err = double(30)
 test.err = double(30)
 
 for (mtry in 1:30){
-  fit = randomForest(SalePrice~., data = dfOverall, subset = train.overall, mtry = mtry, ntree = 350)
+  fit = randomForest(SalePrice~., data = dfOverall, subset = train.overall, 
+                     mtry = mtry, ntree = 350)
   oob.err[mtry] = fit$mse[10]
   pred = predict(fit, dfOverall[-train.overall,])
   test.err[mtry] = with(dfOverall[-train.overall,], mean( (SalePrice-pred)^2 ))
 } # NOTE: takes about a minute
 
-matplot(1:mtry, cbind(oob.err, test.err), pch = 23, col = c("red", "blue"), type = "b", ylab = "Mean Squared Error")
+matplot(1:mtry, cbind(oob.err, test.err), pch = 23, col = c("red", "blue"), 
+        type = "b", ylab = "Mean Squared Error")
 legend("topright", legend = c("OOB", "Test"), pch = 23, col = c("red", "blue"))
 
 
@@ -331,8 +333,8 @@ y <- df_train[,1]
 ytest <- df_test[,1]
 
 # predictor variables
-x <- df_train[,2:31]
-xtest <- df_test[,2:31]
+x <- df_train[,2:21]
+xtest <- df_test[,2:21]
 
 # Set randomization seed
 set.seed(42)
@@ -353,27 +355,47 @@ model <- SuperLearner(y,
                       family=gaussian(),
                       SL.library=list("SL.bartMachine",
                                       "SL.gbm",
-                                      "SL.nnls",
+                                      # "SL.nnls",
                                       "SL.extraTrees",
                                       "SL.rpartPrune",
                                       "SL.stepAIC"))
 model2 <- SuperLearner(y,
                       x,
                       family=gaussian(),
-                      SL.library=list("SL.bartMachine",
-                                      "SL.gbm",
-                                      "SL.extraTrees",
-                                      "SL.rpartPrune",
+                      SL.library=list("SL.bayesglm", "SL.nnet", "SL.speedglm", 
+                                      "SL.caret.rpart", "SL.glmnet",
+                                      "SL.speedlm", "SL.randomForest", 
+                                      "SL.biglasso", "SL.ranger", "SL.step.forward", 
+                                      "SL.svm", "SL.earth", "SL.ipredbagg",
+                                      "SL.polymars", "SL.step", "SL.xgboost", 
+                                      "SL.loess", "SL.rpart", "SL.cforest", "SL.ksvm", 
+                                      "SL.bartMachine", "SL.gbm",  
+                                      "SL.extraTrees", "SL.rpartPrune", 
                                       "SL.stepAIC"))
 # Return the model
 model2
+
+model3 <- SuperLearner(y,
+                       x,
+                       family=gaussian(),
+                       SL.library=list("SL.speedlm", "SL.svm", "SL.gbm", 
+                                       "SL.extraTrees"))
+
+# Return the model
+model3
 model$times
 # plot(cv.model)
 warnings()
 
-# First Pass:
-list("SL.bayesglm", "SL.nnet", "SL.speedglm", "SL.caret.rpart", "SL.glmnet",
-     "SL.speedlm", "SL.randomForest", "SL.biglasso")
+# Low coefficient models removed:
+list("SL.bayesglm", "SL.nnet", "SL.speedglm", "SL.caret.rpart", "SL.glmnet", 
+     "SL.randomForest", "SL.biglasso", "SL.ranger", "SL.step.forward", 
+     "SL.earth", "SL.ipredbagg", "SL.polymars", "SL.step", "SL.rpart", 
+     "SL.cforest", "SL.ksvm", "SL.stepAIC",  # removed first pass
+     "SL.xgboost", "SL.bartMachine",         # removed second pass
+     "SL.rpartPrune",                        # removed third pass
+     "SL.loess"                              # removed due to high added risk
+     )
 
 # Second Pass:
 list("SL.ranger", "SL.step.forward", "SL.svm", "SL.earth", "SL.glm", "SL.ipredbagg",
@@ -386,26 +408,100 @@ list("SL.bartMachine", "SL.gbm", "SL.nnls", "SL.extraTrees", "SL.rpartPrune",
      "SL.stepAIC") # nnls highest coefficient but also high error
 
 
-## Get V-vold cross-validated risk estimate
+## Cross Validation
+## Get V-fold cross-validated risk estimate
 cv.model <- CV.SuperLearner(y, x, V=5,
                             SL.library = list("SL.gbm", 
                                               "SL.nnls", 
                                               "SL.extraTrees", 
                                               "SL.rpartPrune", 
                                               "SL.stepAIC"))
-cv.model2 <- CV.SuperLearner(y, x, V=5,
-                            SL.library = list("SL.bartMachine",
-                                              "SL.gbm", 
-                                              "SL.extraTrees", 
-                                              "SL.rpartPrune", 
-                                              "SL.stepAIC"))
+cv.model3 <- CV.SuperLearner(y, x, V=5, family = "gaussian"
+                            SL.library = list("SL.speedlm", "SL.svm", "SL.gbm", 
+                                              "SL.extraTrees"))
 # Print out the summary statistics
 summary(cv.model)
-summary(cv.model2)
+summary(cv.model3)
 
 # Plot models used and their variation
 plot(cv.model)
-plot(cv.model2)
+plot(cv.model3)
+
+
+# ## Duh, can't use confusion matrix for continuous variable
+# # Build a confusion matrix to review results:
+# # Load in `caret`
+# library(caret)
+# 
+# # Create the confusion matrix
+# n <- as.matrix(ytest)
+# cm <- confusionMatrix(predictions$pred, as.factor(n))
+# # cm <- confusionMatrix(predictions, ytest)
+# dim(predictions$pred)
+# 
+# dim(n)
+# dim(xtest)
+# length(ytest)
+# n <- as.matrix(ytest)
+# cm <- confusionMatrix(as.factor(predictions$pred), as.factor(n))
+# levels(n)
+# levels(as.factor(predictions$pred))
+# levels(as.factor(n))
+# length(levels(as.factor(n)))
+# length(levels(as.factor(predictions$pred)))
+# 
+# n <- as.matrix(ytest)
+# cm <- confusionMatrix(predictions$pred, n)
+# cm <- confusionMatrix(as.factor(predictions$pred), as.factor(n))
+# 
+# dim(n)
+# dim(predictions$pred)
+# dim(as.factor(n))
+# dim(as.factor(predictions$pred))
+
+
+## Make Predictions with SuperLearner
+predictions <- predict.SuperLearner(model3, newdata=xtest)
+
+# Return ensemble predictions
+head(predictions$pred)
+
+# Return individual library predictions
+head(predictions$library.predict)
+
+
+
+# Predict back on the holdout dataset.
+# onlySL is set to TRUE so we don't fit algorithms that had weight = 0, saving computation.
+pred = predict(model3, xtest, onlySL = TRUE)
+
+# Check the structure of this prediction object.
+str(pred)
+
+# Review the columns of $library.predict.
+summary(pred$library.predict)
+
+# Histogram of our predicted values.
+library(ggplot2)
+qplot(pred$pred[, 1]) + theme_minimal()
+
+# Scatterplot of original values (0, 1) and predicted values.
+# Ideally we would use jitter or slight transparency to deal with overlap.
+qplot(ytest, pred$pred[, 1]) + theme_minimal()
+
+# # NOPE, THIS IS FOR BINARY CLASSIFICATION ONLY
+# # Review AUC - Area Under Curve
+# pred_rocr = ROCR::prediction(pred$pred, ytest)
+# auc = ROCR::performance(pred_rocr, measure = "auc", x.measure = "cutoff")@y.values[[1]]
+# auc
+
+
+
+
+
+
+
+
 
 
 
