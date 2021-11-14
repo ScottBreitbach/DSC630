@@ -1,0 +1,89 @@
+---
+title: "Housing Data Modeling"
+author: "Scott Breitbach, Pushkar Chougule, Rachel Nelson"
+date: "11/14/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Set Seed
+set.seed(42)
+# Set Working Directory
+setwd("C:/Users/micha/OneDrive/Documents/GitHub/DSC630/Project")
+```
+
+## Load Dataframes
+
+```{r df}
+# Entire Dataset with Ordinal Variables converted
+dfOrd <- read.csv("dfTrainC.csv")      # 1460 x  81
+# Entire Dataset with dummy variables created
+dfAn <- read.csv("dfAnalysis.csv")     # 1 1460 x 257 (with all dummies)
+
+## FEATURE SELECTED DATA SUBSETS:
+# Variables that highly correlate (>0.5) w/SalePrice
+dfCorrSP <- read.csv("dfTrain1.csv")   # 2 1460 x  16 (correlate with SalePrice)
+# Variables with high F-statistic value (top 30)
+dfFstat <- read.csv("featFstatistic.csv") # 4 1460 x 31 (top F stat features)
+# Variables with high LightBGM value (top 30)
+dfLBGM <- read.csv("featLightBGM.csv")    # 5 1460 x 31 (top LightBGM features)
+# Variables with high Logistic Regression value (top 30)
+dfLogReg <- read.csv("featLogisticRegression.csv") # 6 1460 x 31 (top logistic regression features)
+# Variables with high Mutual Information value (top 30)
+dfMInf <- read.csv("featMutualInformation.csv")    # 7 1460 x 31 (top mutual information features)
+# Overall combined top variables from feature selections (top 30)
+dfOverall <- read.csv("featOverall.csv")  # 8 1460 x 31 (top overall features)
+```
+
+## Linear Regression Modeling
+
+```{r lm}
+# Get summary of model for each data set
+lmOrd = lm(formula = SalePrice~., data = dfOrd)
+summary(lmOrd)
+
+lmAn = lm(formula = SalePrice~., data = dfAn)
+summary(lmAn) 
+
+lmCorrSP = lm(formula = SalePrice~., data = dfCorrSP)
+summary(lmCorrSP)
+
+lmFstat = lm(formula = SalePrice~., data = dfFstat)
+summary(lmFstat)
+
+lmLBGM = lm(formula = SalePrice~., data = dfLBGM)
+summary(lmLBGM)
+
+lmLogReg = lm(formula = SalePrice~., data = dfLogReg)
+summary(lmLogReg)
+
+lmMInf = lm(formula = SalePrice~., data = dfMInf)
+summary(lmMInf)
+
+lmOverall = lm(formula = SalePrice~., data = dfOverall)
+summary(lmOverall)
+```
+
+## Compare Linear Regression Models
+
+```{r lm}
+# Load libraries
+library(AICcmodavg)
+
+# Put together list of models for comparison
+models <- list(lmOrd, lmAn, lmCorrSP, lmFstat,
+               lmLBGM, lmLogReg, lmMInf, lmOverall)
+model.names <- c('lmOrd', 'lmAn', 'lmCorrSP', 'lmFstat',
+                 'lmLBGM', 'lmLogReg', 'lmMInf', 'lmOverall')
+aictab(cand.set = models, modnames = model.names)
+
+# Nice summary comparison
+# From here: https://cran.r-project.org/web/packages/performance/performance.pdf
+# Load libraries
+library(performance)  
+
+# Compare models
+compare_performance(lmOrd, lmAn, lmCorrSP, lmFstat, 
+                    lmLBGM, lmLogReg, lmMInf, lmOverall)
+```
