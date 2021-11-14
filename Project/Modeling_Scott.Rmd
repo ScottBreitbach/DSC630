@@ -7,6 +7,9 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+# Clear environment
+rm(list = ls())
+
 # Set Seed
 set.seed(42)
 
@@ -218,7 +221,7 @@ abline(h = min(test.err), col = "red")
 Boosting manages to drop the error below the best error from the Random Forest
 model (red line). 
 NOTE: the first time I ran this it looked great; not sure what happened and 
-hopefully it fixes itself when I run it again.
+hopefully it fixes itself when I run it again. Nope, it did not. idk 
 
 
 # Ensemble Modeling
