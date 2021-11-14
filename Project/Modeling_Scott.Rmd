@@ -9,6 +9,7 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 # Set Seed
 set.seed(42)
+
 # Set Working Directory
 setwd("C:/Users/micha/OneDrive/Documents/GitHub/DSC630/Project")
 ```
@@ -54,9 +55,9 @@ summary(lmFstat)
 ```
 
 ## Compare Linear Regression Models
+Source: https://cran.r-project.org/web/packages/performance/performance.pdf
 
 ```{r lm compare}
-# From: https://cran.r-project.org/web/packages/performance/performance.pdf
 # Load libraries
 library(performance)  
 
@@ -126,10 +127,10 @@ Model seems to fit well.
 
 
 # Decision Trees
+Source: https://www.datacamp.com/community/tutorials/decision-trees-R
 ## Random Forest
 
 ```{r random forest}
-# From: https://www.datacamp.com/community/tutorials/decision-trees-R
 # Load Libraries
 library(randomForest)
 
@@ -175,8 +176,7 @@ summary(boost.overall)
 ```
 Our model here is largely influenced by only a handful of variables: 
 `OverallQual` accounting for about a third, `GrLivArea` about a fourth, followed
-by `GarageArea` and `MasVnrArea`, then `WoodDeckSF` and `ExterQual` to a lesser
-extent. Let's look at a few of them.
+by `GarageArea` and then some others. Let's look at a few of them:
 
 ```{r boost variables}
 # Plot variables
@@ -217,10 +217,15 @@ abline(h = min(test.err), col = "red")
 ```
 Boosting manages to drop the error below the best error from the Random Forest
 model (red line). 
+NOTE: the first time I ran this it looked great; not sure what happened and 
+hopefully it fixes itself when I run it again.
+
 
 # Ensemble Modeling
 Using `SuperLearner()`  
-Source: https://www.datacamp.com/community/tutorials/ensemble-r-machine-learning
+Sources:  
+https://www.datacamp.com/community/tutorials/ensemble-r-machine-learning  
+https://cran.r-project.org/web/packages/SuperLearner/vignettes/Guide-to-SuperLearner.html
 
 ```{r ensemble}
 # Load libraries
@@ -240,7 +245,7 @@ x <- df_train[,2:21]
 xtest <- df_test[,2:21]
 
 # Return the model
-sl <- SuperLearner(y, x, family = gaussian(),
+sl <- SuperLearner(y, x, family = gaussian(), # gaussian for continuous var
                    SL.library = list("SL.speedlm", "SL.svm", "SL.gbm", 
                                      "SL.extraTrees"))
 
@@ -260,14 +265,14 @@ sl$times
 ```
 
 The `extraTrees` model in the ensemble has the highest coefficient, indicating
-it is weighted highly in the ensemble. Following this, `gbm` and `speedlm` are
+it is weighted highly in the ensemble. Following this, `speedlm` and `gbm` are
 the next highest weighted models.
 
 ### Cross-Validation of Ensemble
 
 ```{r ensemble cv}
 # Get V-fold cross-validated risk estimate
-cv.sl <- CV.SuperLearner(y, x, V=5, family = gaussian(),
+cv.sl <- CV.SuperLearner(y, x, V=5, family = gaussian(), # gaussian for continuous var
                          SL.library = list("SL.speedlm", "SL.svm", "SL.gbm", 
                                            "SL.extraTrees"))
 
@@ -281,13 +286,42 @@ plot(cv.sl)
 ### Make Predictions using `SuperLearner()`
 
 ```{r predict}
+# Make Predictions with SuperLearner
+predictions <- predict.SuperLearner(sl, newdata=xtest)
 
+# Return ensemble predictions
+head(predictions$pred)
+
+# Return individual library predictions
+head(predictions$library.predict)
 ```
+
+### Predict using test data set
+
+```{r pred test}
+# Predict back on the holdout data set
+# Note: onlySL=TRUE includes only models weighted > 0
+pred = predict(sl, xtest, onlySL = TRUE)
+
+# Check the structure of this prediction object.
+str(pred)
+
+# Review the columns of $library.predict.
+summary(pred$library.predict)
+
+# Histogram of our predicted values.
+library(ggplot2)
+qplot(pred$pred[, 1]) + theme_minimal()
+
+# Scatterplot of original values (0, 1) and predicted values.
+qplot(ytest, pred$pred[, 1]) + theme_minimal()
+```
+
+Note: there's some hyperparameter tuning available in SuperLearner as well.
+
 
 ```{r desc}
 
 ```
 
-```{r desc}
 
-```
