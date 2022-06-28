@@ -1,0 +1,74 @@
+---
+title: "Housing Prices"
+output: pdf_document
+---
+
+
+## Load required libraries for models that we are testing
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(forecast)
+library(nnet)
+library(randomForest)
+library(rpart)
+library(earth)
+library(performance)
+library(see)
+library(rpart.plot)
+library(patchwork)
+```
+
+## Load the data sets
+
+This loads up the data sets dfTraining and dfAnalysis so we can use them to create models
+```{r loaddata, include=TRUE}
+rm(list = ls())
+df <- read.csv("dfTrain1.csv") 
+```
+
+## Decision Tree
+Create a decision tree model
+```{r dt, include=TRUE}
+# Decision Tree
+tree <- rpart(formula = SalePrice ~ OverallQual + YearBuilt + YearRemodAdd + TotalBsmtSF +
+              GrLivArea + GarageCars + GarageArea + BsmtQual_Ex + KitchenQual_Ex, 
+              data = df, minsplit = 20, minbucket = 7, xval = 10, maxdepth = 20, 
+              cp = 1e-05, usesurrogate = 0, surrogatestyle = 0)
+
+```
+Decision Tree plot
+```{r dtp, include=TRUE}
+# Visualize the decision tree with rpart.plot
+rpart.plot(tree, box.palette="RdBu", shadow.col="gray", nn=TRUE)
+```
+
+
+## Linear Regression
+Regression Model
+```{r reg1, include=TRUE}
+# Linear Regression (using variables that are high correlation)
+reg <- lm(formula = SalePrice ~ OverallQual + YearBuilt + YearRemodAdd + TotalBsmtSF + 
+              GrLivArea + GarageCars + BsmtQual_Ex + KitchenQual_Ex, data = df)
+
+# Model Performance
+print(reg)
+r2(reg)
+model_performance(reg)
+
+#Visualization of model checks
+check_model(reg)
+```
+
+## Neural Network
+
+Adding a neural network model
+
+```{r nn, include=TRUE}
+# Neural Network
+nn <-nnet.formula(formula = SalePrice ~ OverallQual + YearBuilt + YearRemodAdd + TotalBsmtSF
+                  + GrLivArea + GarageCars + GarageArea + BsmtQual_Ex + KitchenQual_Ex, 
+                  data = df, size = 10, linout = TRUE, rang = c(0.7), decay = 0.1, 
+                  MaxNWts = 1000, maxit = 100)
+
+```
+
